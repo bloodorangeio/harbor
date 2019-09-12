@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/garyburd/redigo/redis"
 	"github.com/goharbor/harbor/src/common/dao"
@@ -462,6 +463,13 @@ func ParseManifestInfoFromReq(req *http.Request) (*ManifestInfo, error) {
 		tag = reference
 	}
 
+	mediaType := req.Header.Get("Content-Type")
+	if mediaType != schema1.MediaTypeManifest &&
+		mediaType != schema1.MediaTypeSignedManifest &&
+		mediaType != schema2.MediaTypeManifest {
+		return nil, fmt.Errorf("unsupported content type for manifest: %s", mediaType)
+	}
+
 	if req.Body == nil {
 		return nil, fmt.Errorf("body missing")
 	}
@@ -473,7 +481,7 @@ func ParseManifestInfoFromReq(req *http.Request) (*ManifestInfo, error) {
 	}
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
-	manifest, desc, err := distribution.UnmarshalManifest(schema2.MediaTypeManifest, body)
+	manifest, desc, err := distribution.UnmarshalManifest(mediaType, body)
 	if err != nil {
 		log.Warningf("Error occurred when to Unmarshal Manifest %v", err)
 		return nil, err

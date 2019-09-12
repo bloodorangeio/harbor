@@ -40,7 +40,7 @@ type NotificationHandler struct {
 	api.BaseController
 }
 
-const manifestPattern = `.*`
+const manifestPattern = `^application/vnd.(docker.distribution|oci.image).manifest.v\d\+(json|prettyjws)`
 const vicPrefix = "vic/"
 
 // Post handles POST request, and records audit log or refreshes cache based on event.

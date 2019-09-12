@@ -483,11 +483,34 @@ func ParseManifestInfoFromReq(req *http.Request) (*ManifestInfo, error) {
 	}
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
-	manifest, desc, err := distribution.UnmarshalManifest(mediaType, body)
+	var manifest ocispec.Manifest
+	err = json.Unmarshal(body, &manifest)
 	if err != nil {
-		log.Warningf("Error occurred when to Unmarshal Manifest %v", err)
+		log.Warningf("Error occurred when to Unmarshal OCI Manifest %v", err)
 		return nil, err
 	}
+
+	body, err = ioutil.ReadAll(req.Body)
+	if err != nil {
+		log.Warningf("Error occurred when to copy manifest body 2 %v", err)
+		return nil, err
+	}
+	req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+
+	var desc ocispec.Descriptor
+	err = json.Unmarshal(body, &desc)
+	if err != nil {
+		log.Warningf("Error occurred when to Unmarshal OCI Descriptor %v", err)
+		return nil, err
+	}
+
+	/*
+		manifest, desc, err := distribution.UnmarshalManifest(mediaType, body)
+		if err != nil {
+			log.Warningf("Error occurred when to Unmarshal Manifest %v", err)
+			return nil, err
+		}
+	*/
 
 	projectName, _ := utils.ParseRepository(repository)
 	project, err := dao.GetProjectByName(projectName)
@@ -498,13 +521,33 @@ func ParseManifestInfoFromReq(req *http.Request) (*ManifestInfo, error) {
 		return nil, fmt.Errorf("project %s not found", projectName)
 	}
 
+	references := []distribution.Descriptor{}
+	for _, layer := range manifest.Layers {
+		d := distribution.Descriptor{
+			MediaType:   layer.MediaType,
+			Size:        layer.Size,
+			Digest:      layer.Digest,
+			URLs:        layer.URLs,
+			Annotations: layer.Annotations,
+			Platform:    layer.Platform,
+		}
+		references = append(references, d)
+	}
+
 	return &ManifestInfo{
 		ProjectID:  project.ProjectID,
 		Repository: repository,
 		Tag:        tag,
 		Digest:     desc.Digest.String(),
-		References: manifest.References(),
-		Descriptor: desc,
+		References: references,
+		Descriptor: distribution.Descriptor{
+			MediaType:   desc.MediaType,
+			Size:        desc.Size,
+			Digest:      desc.Digest,
+			URLs:        desc.URLs,
+			Annotations: desc.Annotations,
+			Platform:    desc.Platform,
+		},
 	}, nil
 }
 

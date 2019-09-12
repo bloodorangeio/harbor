@@ -41,6 +41,7 @@ import (
 	"github.com/goharbor/harbor/src/core/promgr"
 	"github.com/goharbor/harbor/src/pkg/scan/whitelist"
 	"github.com/opencontainers/go-digest"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type contextKey string
@@ -466,7 +467,8 @@ func ParseManifestInfoFromReq(req *http.Request) (*ManifestInfo, error) {
 	mediaType := req.Header.Get("Content-Type")
 	if mediaType != schema1.MediaTypeManifest &&
 		mediaType != schema1.MediaTypeSignedManifest &&
-		mediaType != schema2.MediaTypeManifest {
+		mediaType != schema2.MediaTypeManifest &&
+		mediaType != ocispec.MediaTypeImageManifest {
 		return nil, fmt.Errorf("unsupported content type for manifest: %s", mediaType)
 	}
 
